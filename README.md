@@ -92,18 +92,7 @@ if (bmi088_read_all(&imu_sensor, &sensor_data) == 0) {
 
 ### Data Structures
 
-#### `bmi088_data_t`
-```c
-typedef struct {
-    int16_t accel_x;    /**< Accelerometer X-axis data */
-    int16_t accel_y;    /**< Accelerometer Y-axis data */
-    int16_t accel_z;    /**< Accelerometer Z-axis data */
-    int16_t gyro_x;     /**< Gyroscope X-axis data */
-    int16_t gyro_y;     /**< Gyroscope Y-axis data */
-    int16_t gyro_z;     /**< Gyroscope Z-axis data */
-    int16_t temp;       /**< Temperature data */
-} bmi088_data_t;
-```
+
 
 #### `bmi088_t`
 ```c
@@ -124,11 +113,13 @@ typedef struct {
   - `-3`: Wrong device ID (expected 0x1E for accel, 0x0F for gyro)
   - `-4`: Power management error
 
-#### `bmi088_read_all(bmi088_t *dev, bmi088_data_t *data)`
+#### `bmi088_read_all(bmi088_t *dev, int16_t *accel_x, int16_t *accel_y, int16_t *accel_z, int16_t *gyro_x, int16_t *gyro_y, int16_t *gyro_z, int16_t *temp)`
 - **Purpose**: Read all sensor data (temperature, accelerometer, gyroscope)
 - **Parameters**: 
   - `dev` - Pointer to sensor context
-  - `data` - Pointer to data structure
+  - `accel_x, accel_y, accel_z` - Pointers to acceleration values
+  - `gyro_x, gyro_y, gyro_z` - Pointers to angular velocity values
+  - `temp` - Pointer to temperature value
 - **Returns**: `0` on success, negative value on error
 
 #### `bmi088_read_temp(bmi088_t *dev, int16_t *temp)`
@@ -164,7 +155,9 @@ typedef struct {
 
 /* Global variables for debugging */
 bmi088_t imu_sensor;
-bmi088_data_t sensor_data;
+int16_t accel_x, accel_y, accel_z;
+int16_t gyro_x, gyro_y, gyro_z;
+int16_t temp;
 int debug_init_result = -1;
 int debug_read_result = -1;
 
@@ -179,19 +172,21 @@ int main(void) {
     i2c_driver_init_i2c1(0x68 << 1);
     
     /* Configure sensor */
+    imu_sensor.bus_type = BMI088_BUS_I2C;
     imu_sensor.bus.read = i2c_read_wrapper;
     imu_sensor.bus.write = i2c_write_wrapper;
+    imu_sensor.bus.dev_addr = 0x68 << 1;
     
     /* Initialize sensor */
     debug_init_result = bmi088_init(&imu_sensor);
     
     while (1) {
         if (debug_init_result == 0) {
-            debug_read_result = bmi088_read_all(&imu_sensor, &sensor_data);
+            debug_read_result = bmi088_read_all(&imu_sensor, &accel_x, &accel_y, &accel_z, &gyro_x, &gyro_y, &gyro_z, &temp);
             
             if (debug_read_result == 0) {
-                /* Data is available in sensor_data structure */
-                /* Use sensor_data.temp, sensor_data.accel_x, etc. */
+                /* Data is available in individual variables */
+                /* Use accel_x, accel_y, accel_z, gyro_x, gyro_y, gyro_z, temp */
             }
         }
         HAL_Delay(100);
@@ -207,7 +202,9 @@ int main(void) {
 
 /* Global variables for debugging */
 bmi088_t imu_sensor;
-bmi088_data_t sensor_data;
+int16_t accel_x, accel_y, accel_z;
+int16_t gyro_x, gyro_y, gyro_z;
+int16_t temp;
 int debug_init_result = -1;
 int debug_read_result = -1;
 
@@ -219,19 +216,21 @@ int main(void) {
     MX_SPI1_Init();
     
     /* Configure sensor for SPI */
+    imu_sensor.bus_type = BMI088_BUS_SPI;
     imu_sensor.bus.read = spi_read_wrapper;
     imu_sensor.bus.write = spi_write_wrapper;
+    imu_sensor.bus.dev_addr = 0x00; // SPI için device address 0
     
     /* Initialize sensor */
     debug_init_result = bmi088_init(&imu_sensor);
     
     while (1) {
         if (debug_init_result == 0) {
-            debug_read_result = bmi088_read_all(&imu_sensor, &sensor_data);
+            debug_read_result = bmi088_read_all(&imu_sensor, &accel_x, &accel_y, &accel_z, &gyro_x, &gyro_y, &gyro_z, &temp);
             
             if (debug_read_result == 0) {
-                /* Data is available in sensor_data structure */
-                /* Use sensor_data.temp, sensor_data.accel_x, etc. */
+                /* Data is available in individual variables */
+                /* Use accel_x, accel_y, accel_z, gyro_x, gyro_y, gyro_z, temp */
             }
         }
         HAL_Delay(100);
@@ -285,13 +284,13 @@ int debug_read_result = -1;
 Then update them in your main loop:
 ```c
 if (debug_read_result == 0) {
-    debug_accel_x = sensor_data.accel_x;
-    debug_accel_y = sensor_data.accel_y;
-    debug_accel_z = sensor_data.accel_z;
-    debug_gyro_x = sensor_data.gyro_x;
-    debug_gyro_y = sensor_data.gyro_y;
-    debug_gyro_z = sensor_data.gyro_z;
-    debug_temp = sensor_data.temp;
+    debug_accel_x = accel_x;
+    debug_accel_y = accel_y;
+    debug_accel_z = accel_z;
+    debug_gyro_x = gyro_x;
+    debug_gyro_y = gyro_y;
+    debug_gyro_z = gyro_z;
+    debug_temp = temp;
 }
 ```
 
